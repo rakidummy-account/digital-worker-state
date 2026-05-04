@@ -1,31 +1,31 @@
 ################################## Mandatory Data Sources ##################################
 
 data "aws_ssm_parameter" "core_tags" {
-  provider = aws.target_region
+  provider = aws.primary
   name     = "/aft/account-request/custom-fields/core_tags"
 }
 
 data "aws_kms_alias" "account_kms_key" {
-  provider = aws.target_region
+  provider = aws.primary
   name     = "alias/aft/account_kms_cmk"
 }
 
 ################################## Additional Data Sources ##################################
 
 data "aws_caller_identity" "current" {
-  provider = aws.target_region
+  provider = aws.primary
 }
 
 data "aws_region" "current" {
-  provider = aws.target_region
+  provider = aws.primary
 }
 
 ################################## Locals ##################################
 
 locals {
-  core_tags   = jsondecode(data.aws_ssm_parameter.core_tags.insecure_value)
-  tags        = merge(local.core_tags, var.tags)
-  kms_key_arn = var.kms_key_arn == null ? data.aws_kms_alias.account_kms_key.target_key_arn : var.kms_key_arn
+  core_tags   = jsondecode(data.aws_ssm_parameter.core_tags.value)
+  merged_tags = merge(local.core_tags, var.tags)
+  kms_key_arn = var.kms_key_arn == null ? data.aws_kms_alias.account_kms_key.arn : var.kms_key_arn
   account_id  = data.aws_caller_identity.current.account_id
   region      = data.aws_region.current.name
 }
@@ -33,7 +33,7 @@ locals {
 ################################## IAM Policy Documents - Bucket Policy ##################################
 
 data "aws_iam_policy_document" "deny_non_ssl" {
-  provider = aws.target_region
+  provider = aws.primary
 
   statement {
     sid       = "DenyNonSSLRequests"
@@ -60,7 +60,7 @@ data "aws_iam_policy_document" "deny_non_ssl" {
 ################################## IAM Policy Documents - Assume Role ##################################
 
 data "aws_iam_policy_document" "assume_role" {
-  provider = aws.target_region
+  provider = aws.primary
 
   for_each = var.iam_roles
 
@@ -79,7 +79,7 @@ data "aws_iam_policy_document" "assume_role" {
 ################################## IAM Policy Documents - Role Policies ##################################
 
 data "aws_iam_policy_document" "role_policy" {
-  provider = aws.target_region
+  provider = aws.primary
 
   for_each = var.iam_roles
 
@@ -97,7 +97,7 @@ data "aws_iam_policy_document" "role_policy" {
 ################################## IAM Policy Documents - CloudTrail Bucket Policy ##################################
 
 data "aws_iam_policy_document" "cloudtrail_bucket_policy" {
-  provider = aws.target_region
+  provider = aws.primary
 
   count = var.cloudtrail_config != null ? 1 : 0
 
