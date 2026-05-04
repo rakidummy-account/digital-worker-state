@@ -4,7 +4,7 @@
 module "vpc" {
   source = "../../"
   providers = {
-    aws.target_region = aws.region1
+    aws.primary = aws.primary
   }
 
   #required
@@ -104,5 +104,5 @@ module "vpc" {
     log_destination_type = "cloud-watch-logs"
   }
 
-  tags = local.core_tags
+  tags = { ManagedBy = "terraform" }
 }
