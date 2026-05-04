@@ -1,18 +1,18 @@
 ################################## S3 Data Lake Bucket (step_01) ##################################
 
 resource "aws_s3_bucket" "datalake" {
-  provider = aws.target_region
+  provider = aws.primary
 
   bucket        = var.bucket_name
   force_destroy = var.force_destroy
 
-  tags = local.tags
+  tags = local.merged_tags
 }
 
 ################################## S3 Data Lake Versioning (step_01) ##################################
 
 resource "aws_s3_bucket_versioning" "datalake" {
-  provider = aws.target_region
+  provider = aws.primary
 
   bucket = aws_s3_bucket.datalake.id
 
@@ -24,7 +24,7 @@ resource "aws_s3_bucket_versioning" "datalake" {
 ################################## S3 Data Lake Encryption (step_01) ##################################
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "datalake" {
-  provider = aws.target_region
+  provider = aws.primary
 
   bucket = aws_s3_bucket.datalake.id
 
@@ -40,7 +40,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "datalake" {
 ################################## S3 Data Lake Public Access Block (step_01) ##################################
 
 resource "aws_s3_bucket_public_access_block" "datalake" {
-  provider = aws.target_region
+  provider = aws.primary
 
   bucket = aws_s3_bucket.datalake.id
 
@@ -53,7 +53,7 @@ resource "aws_s3_bucket_public_access_block" "datalake" {
 ################################## S3 Data Lake Lifecycle Configuration (step_01) ##################################
 
 resource "aws_s3_bucket_lifecycle_configuration" "datalake" {
-  provider = aws.target_region
+  provider = aws.primary
 
   count = length(var.lifecycle_rules) > 0 ? 1 : 0
 
@@ -100,7 +100,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "datalake" {
 ################################## S3 Data Lake Bucket Policy - Deny Non-SSL (step_02) ##################################
 
 resource "aws_s3_bucket_policy" "datalake_deny_non_ssl" {
-  provider = aws.target_region
+  provider = aws.primary
 
   count = var.enforce_ssl ? 1 : 0
 
@@ -111,7 +111,7 @@ resource "aws_s3_bucket_policy" "datalake_deny_non_ssl" {
 ################################## IAM Policies (step_03, step_04) ##################################
 
 resource "aws_iam_policy" "role_policy" {
-  provider = aws.target_region
+  provider = aws.primary
 
   for_each = var.iam_roles
 
@@ -120,13 +120,13 @@ resource "aws_iam_policy" "role_policy" {
   path        = "/"
   policy      = data.aws_iam_policy_document.role_policy[each.key].json
 
-  tags = local.tags
+  tags = local.merged_tags
 }
 
 ################################## IAM Roles (step_05, step_06) ##################################
 
 resource "aws_iam_role" "this" {
-  provider = aws.target_region
+  provider = aws.primary
 
   for_each = var.iam_roles
 
@@ -134,13 +134,13 @@ resource "aws_iam_role" "this" {
   description        = each.value.description
   assume_role_policy = data.aws_iam_policy_document.assume_role[each.key].json
 
-  tags = local.tags
+  tags = local.merged_tags
 }
 
 ################################## IAM Role Policy Attachments (step_07, step_08) ##################################
 
 resource "aws_iam_role_policy_attachment" "this" {
-  provider = aws.target_region
+  provider = aws.primary
 
   for_each = var.iam_roles
 
@@ -151,18 +151,18 @@ resource "aws_iam_role_policy_attachment" "this" {
 ################################## CloudTrail Logging S3 Bucket (step_09) ##################################
 
 resource "aws_s3_bucket" "cloudtrail" {
-  provider = aws.target_region
+  provider = aws.primary
 
   count = var.cloudtrail_config != null ? 1 : 0
 
   bucket        = var.cloudtrail_config.log_bucket_name
   force_destroy = var.force_destroy
 
-  tags = local.tags
+  tags = local.merged_tags
 }
 
 resource "aws_s3_bucket_versioning" "cloudtrail" {
-  provider = aws.target_region
+  provider = aws.primary
 
   count = var.cloudtrail_config != null ? 1 : 0
 
@@ -174,7 +174,7 @@ resource "aws_s3_bucket_versioning" "cloudtrail" {
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail" {
-  provider = aws.target_region
+  provider = aws.primary
 
   count = var.cloudtrail_config != null ? 1 : 0
 
@@ -190,7 +190,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail" {
 }
 
 resource "aws_s3_bucket_public_access_block" "cloudtrail" {
-  provider = aws.target_region
+  provider = aws.primary
 
   count = var.cloudtrail_config != null ? 1 : 0
 
@@ -205,7 +205,7 @@ resource "aws_s3_bucket_public_access_block" "cloudtrail" {
 ################################## CloudTrail Logging Bucket Policy (step_10) ##################################
 
 resource "aws_s3_bucket_policy" "cloudtrail" {
-  provider = aws.target_region
+  provider = aws.primary
 
   count = var.cloudtrail_config != null ? 1 : 0
 
@@ -216,7 +216,7 @@ resource "aws_s3_bucket_policy" "cloudtrail" {
 ################################## CloudTrail Trail (step_11) ##################################
 
 resource "aws_cloudtrail" "this" {
-  provider = aws.target_region
+  provider = aws.primary
 
   count = var.cloudtrail_config != null ? 1 : 0
 
@@ -240,5 +240,5 @@ resource "aws_cloudtrail" "this" {
 
   depends_on = [aws_s3_bucket_policy.cloudtrail]
 
-  tags = local.tags
+  tags = local.merged_tags
 }
