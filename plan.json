@@ -1,0 +1,274 @@
+{
+  "jira_ticket_id": "INFRA-9999",
+  "title": "Provision VPC with Public and Private Subnets for Payments Service (us-east-1)",
+  "steps": [
+    {
+      "id": "step_01",
+      "name": "Create VPC",
+      "resource_type": "aws_vpc",
+      "description": "Create the main VPC with CIDR 10.10.0.0/16 for the payments service. DNS support and DNS hostnames are enabled to support future ECS service discovery.",
+      "dependencies": [],
+      "terraform_hint": "cidr_block = \"10.10.0.0/16\", enable_dns_support = true, enable_dns_hostnames = true. Tag: Name = payments-prod-vpc. Apply default tags: Environment=prod, Team=payments, CostCenter=CC-402."
+    },
+    {
+      "id": "step_02",
+      "name": "Create Internet Gateway",
+      "resource_type": "aws_internet_gateway",
+      "description": "Create and attach an Internet Gateway to the VPC to provide internet access for public subnets.",
+      "dependencies": [
+        "step_01"
+      ],
+      "terraform_hint": "vpc_id references aws_vpc from step_01. Tag: Name = payments-prod-igw."
+    },
+    {
+      "id": "step_03",
+      "name": "Create Public Subnet 1 (us-east-1a)",
+      "resource_type": "aws_subnet",
+      "description": "Create the first public subnet 10.10.1.0/24 in us-east-1a. map_public_ip_on_launch is enabled for public-facing workloads.",
+      "dependencies": [
+        "step_01"
+      ],
+      "terraform_hint": "vpc_id from step_01, cidr_block = \"10.10.1.0/24\", availability_zone = \"us-east-1a\", map_public_ip_on_launch = true. Tag: Name = payments-prod-public-subnet-1a."
+    },
+    {
+      "id": "step_04",
+      "name": "Create Public Subnet 2 (us-east-1b)",
+      "resource_type": "aws_subnet",
+      "description": "Create the second public subnet 10.10.2.0/24 in us-east-1b for multi-AZ redundancy.",
+      "dependencies": [
+        "step_01"
+      ],
+      "terraform_hint": "vpc_id from step_01, cidr_block = \"10.10.2.0/24\", availability_zone = \"us-east-1b\", map_public_ip_on_launch = true. Tag: Name = payments-prod-public-subnet-1b."
+    },
+    {
+      "id": "step_05",
+      "name": "Create Private Subnet 1 (us-east-1a)",
+      "resource_type": "aws_subnet",
+      "description": "Create the first private subnet 10.10.10.0/24 in us-east-1a for backend/ECS workloads.",
+      "dependencies": [
+        "step_01"
+      ],
+      "terraform_hint": "vpc_id from step_01, cidr_block = \"10.10.10.0/24\", availability_zone = \"us-east-1a\", map_public_ip_on_launch = false. Tag: Name = payments-prod-private-subnet-1a."
+    },
+    {
+      "id": "step_06",
+      "name": "Create Private Subnet 2 (us-east-1b)",
+      "resource_type": "aws_subnet",
+      "description": "Create the second private subnet 10.10.20.0/24 in us-east-1b for multi-AZ backend workloads.",
+      "dependencies": [
+        "step_01"
+      ],
+      "terraform_hint": "vpc_id from step_01, cidr_block = \"10.10.20.0/24\", availability_zone = \"us-east-1b\", map_public_ip_on_launch = false. Tag: Name = payments-prod-private-subnet-1b."
+    },
+    {
+      "id": "step_07",
+      "name": "Create Public Route Table",
+      "resource_type": "aws_route_table",
+      "description": "Create a route table for public subnets. A default route (0.0.0.0/0) will point to the Internet Gateway.",
+      "dependencies": [
+        "step_01"
+      ],
+      "terraform_hint": "vpc_id from step_01. Tag: Name = payments-prod-public-rt."
+    },
+    {
+      "id": "step_08",
+      "name": "Create Public Default Route to IGW",
+      "resource_type": "aws_route",
+      "description": "Add a 0.0.0.0/0 route to the public route table pointing to the Internet Gateway for outbound internet access.",
+      "dependencies": [
+        "step_07",
+        "step_02"
+      ],
+      "terraform_hint": "route_table_id from step_07, destination_cidr_block = \"0.0.0.0/0\", gateway_id from step_02 (IGW)."
+    },
+    {
+      "id": "step_09",
+      "name": "Associate Public Subnet 1 with Public Route Table",
+      "resource_type": "aws_route_table_association",
+      "description": "Associate the first public subnet (us-east-1a) with the public route table so it can reach the internet via the IGW.",
+      "dependencies": [
+        "step_03",
+        "step_07"
+      ],
+      "terraform_hint": "subnet_id from step_03, route_table_id from step_07."
+    },
+    {
+      "id": "step_10",
+      "name": "Associate Public Subnet 2 with Public Route Table",
+      "resource_type": "aws_route_table_association",
+      "description": "Associate the second public subnet (us-east-1b) with the public route table.",
+      "dependencies": [
+        "step_04",
+        "step_07"
+      ],
+      "terraform_hint": "subnet_id from step_04, route_table_id from step_07."
+    },
+    {
+      "id": "step_11",
+      "name": "Allocate Elastic IP for NAT Gateway 1",
+      "resource_type": "aws_eip",
+      "description": "Allocate an Elastic IP address for the NAT Gateway in public subnet 1 (us-east-1a).",
+      "dependencies": [
+        "step_02"
+      ],
+      "terraform_hint": "domain = \"vpc\". Tag: Name = payments-prod-nat-eip-1a. Depends on IGW existing before NAT usage."
+    },
+    {
+      "id": "step_12",
+      "name": "Allocate Elastic IP for NAT Gateway 2",
+      "resource_type": "aws_eip",
+      "description": "Allocate an Elastic IP address for the NAT Gateway in public subnet 2 (us-east-1b).",
+      "dependencies": [
+        "step_02"
+      ],
+      "terraform_hint": "domain = \"vpc\". Tag: Name = payments-prod-nat-eip-1b. Depends on IGW existing before NAT usage."
+    },
+    {
+      "id": "step_13",
+      "name": "Create NAT Gateway 1 in Public Subnet 1",
+      "resource_type": "aws_nat_gateway",
+      "description": "Create a NAT Gateway in the first public subnet (us-east-1a) to provide egress internet access for private subnet 1.",
+      "dependencies": [
+        "step_03",
+        "step_11"
+      ],
+      "terraform_hint": "allocation_id from step_11, subnet_id from step_03. Tag: Name = payments-prod-nat-gw-1a."
+    },
+    {
+      "id": "step_14",
+      "name": "Create NAT Gateway 2 in Public Subnet 2",
+      "resource_type": "aws_nat_gateway",
+      "description": "Create a NAT Gateway in the second public subnet (us-east-1b) to provide egress internet access for private subnet 2.",
+      "dependencies": [
+        "step_04",
+        "step_12"
+      ],
+      "terraform_hint": "allocation_id from step_12, subnet_id from step_04. Tag: Name = payments-prod-nat-gw-1b."
+    },
+    {
+      "id": "step_15",
+      "name": "Create Private Route Table 1 (us-east-1a)",
+      "resource_type": "aws_route_table",
+      "description": "Create a route table for the private subnet in us-east-1a. Will route 0.0.0.0/0 to NAT Gateway 1.",
+      "dependencies": [
+        "step_01"
+      ],
+      "terraform_hint": "vpc_id from step_01. Tag: Name = payments-prod-private-rt-1a."
+    },
+    {
+      "id": "step_16",
+      "name": "Create Private Route Table 2 (us-east-1b)",
+      "resource_type": "aws_route_table",
+      "description": "Create a route table for the private subnet in us-east-1b. Will route 0.0.0.0/0 to NAT Gateway 2.",
+      "dependencies": [
+        "step_01"
+      ],
+      "terraform_hint": "vpc_id from step_01. Tag: Name = payments-prod-private-rt-1b."
+    },
+    {
+      "id": "step_17",
+      "name": "Create Private Default Route via NAT GW 1",
+      "resource_type": "aws_route",
+      "description": "Add a 0.0.0.0/0 route to private route table 1 pointing to NAT Gateway 1 for egress traffic from private subnet 1.",
+      "dependencies": [
+        "step_15",
+        "step_13"
+      ],
+      "terraform_hint": "route_table_id from step_15, destination_cidr_block = \"0.0.0.0/0\", nat_gateway_id from step_13."
+    },
+    {
+      "id": "step_18",
+      "name": "Create Private Default Route via NAT GW 2",
+      "resource_type": "aws_route",
+      "description": "Add a 0.0.0.0/0 route to private route table 2 pointing to NAT Gateway 2 for egress traffic from private subnet 2.",
+      "dependencies": [
+        "step_16",
+        "step_14"
+      ],
+      "terraform_hint": "route_table_id from step_16, destination_cidr_block = \"0.0.0.0/0\", nat_gateway_id from step_14."
+    },
+    {
+      "id": "step_19",
+      "name": "Associate Private Subnet 1 with Private Route Table 1",
+      "resource_type": "aws_route_table_association",
+      "description": "Associate private subnet 1 (us-east-1a) with its dedicated private route table to route egress through NAT GW 1.",
+      "dependencies": [
+        "step_05",
+        "step_15"
+      ],
+      "terraform_hint": "subnet_id from step_05, route_table_id from step_15."
+    },
+    {
+      "id": "step_20",
+      "name": "Associate Private Subnet 2 with Private Route Table 2",
+      "resource_type": "aws_route_table_association",
+      "description": "Associate private subnet 2 (us-east-1b) with its dedicated private route table to route egress through NAT GW 2.",
+      "dependencies": [
+        "step_06",
+        "step_16"
+      ],
+      "terraform_hint": "subnet_id from step_06, route_table_id from step_16."
+    },
+    {
+      "id": "step_21",
+      "name": "Create Public Security Group (HTTPS Inbound)",
+      "resource_type": "aws_security_group",
+      "description": "Create a security group for public subnet resources allowing HTTPS (TCP 443) inbound from 0.0.0.0/0 and all outbound.",
+      "dependencies": [
+        "step_01"
+      ],
+      "terraform_hint": "vpc_id from step_01. Ingress: protocol=tcp, from_port=443, to_port=443, cidr_blocks=[\"0.0.0.0/0\"]. Egress: protocol=\"-1\", from_port=0, to_port=0, cidr_blocks=[\"0.0.0.0/0\"]. Tag: Name = payments-prod-public-sg."
+    },
+    {
+      "id": "step_22",
+      "name": "Create Private Security Group (Deny All Inbound)",
+      "resource_type": "aws_security_group",
+      "description": "Create a security group for private subnet resources with no ingress rules (deny all inbound by default). Egress is allowed for NAT-based internet access.",
+      "dependencies": [
+        "step_01"
+      ],
+      "terraform_hint": "vpc_id from step_01. No ingress blocks (AWS default denies all inbound). Egress: protocol=\"-1\", from_port=0, to_port=0, cidr_blocks=[\"0.0.0.0/0\"]. Tag: Name = payments-prod-private-sg. Note: additional ingress rules for inter-service communication can be added later."
+    },
+    {
+      "id": "step_23",
+      "name": "Create CloudWatch Log Group for VPC Flow Logs",
+      "resource_type": "aws_cloudwatch_log_group",
+      "description": "Create a CloudWatch Log Group to store VPC Flow Logs for network traffic monitoring and auditing.",
+      "dependencies": [],
+      "terraform_hint": "name = \"/aws/vpc/payments-prod-flow-logs\", retention_in_days = 90. Tag: Name = payments-prod-flow-logs."
+    },
+    {
+      "id": "step_24",
+      "name": "Create IAM Role for VPC Flow Logs",
+      "resource_type": "aws_iam_role",
+      "description": "Create an IAM role that the VPC Flow Logs service can assume to write logs to CloudWatch.",
+      "dependencies": [],
+      "terraform_hint": "assume_role_policy with Principal: {Service: \"vpc-flow-logs.amazonaws.com\"}, Action: sts:AssumeRole. Tag: Name = payments-prod-flow-logs-role."
+    },
+    {
+      "id": "step_25",
+      "name": "Create IAM Role Policy for VPC Flow Logs",
+      "resource_type": "aws_iam_role_policy",
+      "description": "Attach an inline policy to the flow logs IAM role granting permissions to create log groups, log streams, put log events, and describe log groups/streams in CloudWatch Logs.",
+      "dependencies": [
+        "step_24"
+      ],
+      "terraform_hint": "role from step_24. Policy allows: logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents, logs:DescribeLogGroups, logs:DescribeLogStreams on Resource \"*\" (or scoped to the log group ARN from step_23)."
+    },
+    {
+      "id": "step_26",
+      "name": "Enable VPC Flow Logs",
+      "resource_type": "aws_flow_log",
+      "description": "Enable VPC Flow Logs on the VPC, shipping all traffic logs (ACCEPT, REJECT, ALL) to the CloudWatch Log Group for monitoring and compliance.",
+      "dependencies": [
+        "step_01",
+        "step_23",
+        "step_25"
+      ],
+      "terraform_hint": "vpc_id from step_01, traffic_type = \"ALL\", log_destination_type = \"cloud-watch-logs\", log_destination = aws_cloudwatch_log_group.arn from step_23, iam_role_arn from step_24. Tag: Name = payments-prod-flow-log."
+    }
+  ],
+  "version": 1,
+  "generated_at": "2025-01-15T14:30:00Z",
+  "planner_notes": "Assumptions & Notes:\n1. The ticket suggests using terraform-aws-modules/vpc/aws ~> 5.0, but the plan is decomposed into atomic resource-level steps for full transparency and testability. The CodeGen agent may choose to wrap these into the module if preferred, but each step maps to a single resource type.\n2. NAT Gateways require Elastic IPs — two EIPs are provisioned (one per public subnet / AZ).\n3. Two route tables are created for private subnets (one per AZ) so each private subnet routes through its local AZ NAT Gateway for high availability.\n4. VPC Flow Logs require a CloudWatch Log Group and an IAM Role with trust policy for vpc-flow-logs.amazonaws.com.\n5. Security group for private subnets uses a deny-all-inbound approach (default SG behaviour with no ingress rules).\n6. All resources are tagged with Environment=prod, Team=payments, CostCenter=CC-402 as required.\n7. Naming convention: payments-prod-<resource> (e.g., payments-prod-vpc, payments-prod-public-subnet-1a).\n8. Region is hardcoded to us-east-1; AWS account 123456789012.\n9. Risk: NAT Gateway costs can be significant — two NAT Gateways for HA as requested."
+}
