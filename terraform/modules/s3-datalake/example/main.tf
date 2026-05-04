@@ -4,7 +4,7 @@
 module "s3_datalake" {
   source = "../../"
   providers = {
-    aws.target_region = aws.region1
+    aws.primary = aws.primary
   }
 
   # required
@@ -97,5 +97,5 @@ module "s3_datalake" {
     event_read_write_type      = "All"
   }
 
-  tags = local.core_tags
+  tags = { ManagedBy = "terraform" }
 }
