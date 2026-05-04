@@ -1,0 +1,8 @@
+{
+  "jira_ticket_id": "INFRA-1234",
+  "title": "Provision S3 Data Lake with IAM Access Controls",
+  "description": "We need an S3-based data lake setup for the analytics team.\n\nRequirements:\n- S3 bucket: company-datalake-prod with versioning enabled\n- Server-side encryption (AES-256) on all objects\n- Block all public access settings enabled\n- S3 lifecycle rule: transition objects to Glacier after 90 days\n- IAM role for data-engineers team: read/write to bucket\n- IAM role for data-analysts team: read-only to bucket\n- CloudTrail data events enabled for the bucket\n- Bucket policy denying non-HTTPS (non-TLS) requests\n- All resources tagged: Environment=prod, Team=analytics, CostCenter=CC-105",
+  "requester": "bob@example.com",
+  "priority": "medium",
+  "context": "Analytics team runs Spark jobs on EMR reading from this bucket. Region: us-east-1. Account: 123456789012. Use terraform-aws-modules/s3-bucket/aws ~> 4.0"
+}
