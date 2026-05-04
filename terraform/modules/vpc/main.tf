@@ -1,13 +1,13 @@
 ################################## VPC ##################################
 
 resource "aws_vpc" "this" {
-  provider = aws.target_region
+  provider = aws.primary
 
   cidr_block           = var.vpc_cidr_block
   enable_dns_support   = var.enable_dns_support
   enable_dns_hostnames = var.enable_dns_hostnames
 
-  tags = merge(local.tags, {
+  tags = merge(local.merged_tags, {
     Name = var.name_prefix
   })
 }
@@ -15,11 +15,11 @@ resource "aws_vpc" "this" {
 ################################## Internet Gateway ##################################
 
 resource "aws_internet_gateway" "this" {
-  provider = aws.target_region
+  provider = aws.primary
 
   vpc_id = aws_vpc.this.id
 
-  tags = merge(local.tags, {
+  tags = merge(local.merged_tags, {
     Name = "${var.name_prefix}-igw"
   })
 }
@@ -27,7 +27,7 @@ resource "aws_internet_gateway" "this" {
 ################################## Public Subnets ##################################
 
 resource "aws_subnet" "public" {
-  provider = aws.target_region
+  provider = aws.primary
 
   for_each = var.public_subnets
 
@@ -36,7 +36,7 @@ resource "aws_subnet" "public" {
   availability_zone       = each.value.availability_zone
   map_public_ip_on_launch = each.value.map_public_ip_on_launch
 
-  tags = merge(local.tags, {
+  tags = merge(local.merged_tags, {
     Name = "${var.name_prefix}-public-${each.key}"
   })
 }
@@ -44,7 +44,7 @@ resource "aws_subnet" "public" {
 ################################## Private Subnets ##################################
 
 resource "aws_subnet" "private" {
-  provider = aws.target_region
+  provider = aws.primary
 
   for_each = var.private_subnets
 
@@ -53,7 +53,7 @@ resource "aws_subnet" "private" {
   availability_zone       = each.value.availability_zone
   map_public_ip_on_launch = each.value.map_public_ip_on_launch
 
-  tags = merge(local.tags, {
+  tags = merge(local.merged_tags, {
     Name = "${var.name_prefix}-private-${each.key}"
   })
 }
@@ -61,17 +61,17 @@ resource "aws_subnet" "private" {
 ################################## Public Route Table ##################################
 
 resource "aws_route_table" "public" {
-  provider = aws.target_region
+  provider = aws.primary
 
   vpc_id = aws_vpc.this.id
 
-  tags = merge(local.tags, {
+  tags = merge(local.merged_tags, {
     Name = "${var.name_prefix}-public-rt"
   })
 }
 
 resource "aws_route" "public_internet" {
-  provider = aws.target_region
+  provider = aws.primary
 
   route_table_id         = aws_route_table.public.id
   destination_cidr_block = "0.0.0.0/0"
@@ -79,7 +79,7 @@ resource "aws_route" "public_internet" {
 }
 
 resource "aws_route_table_association" "public" {
-  provider = aws.target_region
+  provider = aws.primary
 
   for_each = var.public_subnets
 
@@ -90,13 +90,13 @@ resource "aws_route_table_association" "public" {
 ################################## Elastic IPs for NAT Gateways ##################################
 
 resource "aws_eip" "nat" {
-  provider = aws.target_region
+  provider = aws.primary
 
   for_each = var.nat_gateways
 
   domain = "vpc"
 
-  tags = merge(local.tags, {
+  tags = merge(local.merged_tags, {
     Name = "${var.name_prefix}-nat-eip-${each.key}"
   })
 
@@ -106,14 +106,14 @@ resource "aws_eip" "nat" {
 ################################## NAT Gateways ##################################
 
 resource "aws_nat_gateway" "this" {
-  provider = aws.target_region
+  provider = aws.primary
 
   for_each = var.nat_gateways
 
   allocation_id = aws_eip.nat[each.key].id
   subnet_id     = aws_subnet.public[each.value.public_subnet_key].id
 
-  tags = merge(local.tags, {
+  tags = merge(local.merged_tags, {
     Name = "${var.name_prefix}-nat-gw-${each.key}"
   })
 
@@ -123,19 +123,19 @@ resource "aws_nat_gateway" "this" {
 ################################## Private Route Tables ##################################
 
 resource "aws_route_table" "private" {
-  provider = aws.target_region
+  provider = aws.primary
 
   for_each = var.private_route_tables
 
   vpc_id = aws_vpc.this.id
 
-  tags = merge(local.tags, {
+  tags = merge(local.merged_tags, {
     Name = "${var.name_prefix}-private-rt-${each.key}"
   })
 }
 
 resource "aws_route" "private_nat" {
-  provider = aws.target_region
+  provider = aws.primary
 
   for_each = var.private_route_tables
 
@@ -145,7 +145,7 @@ resource "aws_route" "private_nat" {
 }
 
 resource "aws_route_table_association" "private" {
-  provider = aws.target_region
+  provider = aws.primary
 
   for_each = var.private_route_tables
 
@@ -156,7 +156,7 @@ resource "aws_route_table_association" "private" {
 ################################## Security Groups ##################################
 
 resource "aws_security_group" "this" {
-  provider = aws.target_region
+  provider = aws.primary
 
   for_each = var.security_groups
 
@@ -194,7 +194,7 @@ resource "aws_security_group" "this" {
 ################################## CloudWatch Log Group for Flow Logs ##################################
 
 resource "aws_cloudwatch_log_group" "flow_logs" {
-  provider = aws.target_region
+  provider = aws.primary
 
   count = var.flow_log_config != null ? 1 : 0
 
@@ -202,7 +202,7 @@ resource "aws_cloudwatch_log_group" "flow_logs" {
   retention_in_days = var.flow_log_config.retention_in_days
   kms_key_id        = local.kms_key_arn
 
-  tags = merge(local.tags, {
+  tags = merge(local.merged_tags, {
     Name = "${var.name_prefix}-flow-logs"
   })
 }
@@ -210,7 +210,7 @@ resource "aws_cloudwatch_log_group" "flow_logs" {
 ################################## IAM Role for Flow Logs ##################################
 
 resource "aws_iam_role" "flow_logs" {
-  provider = aws.target_region
+  provider = aws.primary
 
   count = var.flow_log_config != null ? 1 : 0
 
@@ -229,7 +229,7 @@ resource "aws_iam_role" "flow_logs" {
     ]
   })
 
-  tags = merge(local.tags, {
+  tags = merge(local.merged_tags, {
     Name = "${var.name_prefix}-flow-logs-role"
   })
 }
@@ -237,7 +237,7 @@ resource "aws_iam_role" "flow_logs" {
 ################################## IAM Role Policy for Flow Logs ##################################
 
 resource "aws_iam_role_policy" "flow_logs" {
-  provider = aws.target_region
+  provider = aws.primary
 
   count = var.flow_log_config != null ? 1 : 0
 
@@ -265,7 +265,7 @@ resource "aws_iam_role_policy" "flow_logs" {
 ################################## VPC Flow Log ##################################
 
 resource "aws_flow_log" "this" {
-  provider = aws.target_region
+  provider = aws.primary
 
   count = var.flow_log_config != null ? 1 : 0
 
@@ -275,7 +275,7 @@ resource "aws_flow_log" "this" {
   log_destination      = aws_cloudwatch_log_group.flow_logs[0].arn
   iam_role_arn         = aws_iam_role.flow_logs[0].arn
 
-  tags = merge(local.tags, {
+  tags = merge(local.merged_tags, {
     Name = "${var.name_prefix}-flow-log"
   })
 }
