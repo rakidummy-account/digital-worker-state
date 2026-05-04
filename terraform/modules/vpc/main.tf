@@ -186,7 +186,7 @@ resource "aws_security_group" "this" {
     }
   }
 
-  tags = merge(local.tags, {
+  tags = merge(local.merged_tags, {
     Name = "${var.name_prefix}-${each.key}"
   })
 }
