@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "error_count": 0,
+  "errors": [],
+  "patches_parsed": 0,
+  "patches_applied": {},
+  "ok_count": 0,
+  "fail_count": 0,
+  "validation_version": 3,
+  "s3_uri": "s3://digital-worker-data-365202715966/sessions/INFRA-9999/validation_v3.json",
+  "validated_at": "2026-05-04T11:52:37.053690Z",
+  "summary": "All validation checks passed."
+}
