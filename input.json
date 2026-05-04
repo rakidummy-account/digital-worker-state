@@ -1,0 +1,8 @@
+{
+  "jira_ticket_id": "INFRA-9999",
+  "title": "Provision VPC with Public and Private Subnets",
+  "description": "We need a new AWS VPC in us-east-1 for the payments service.\n\nRequirements:\n- CIDR 10.10.0.0/16\n- 2 public subnets (10.10.1.0/24, 10.10.2.0/24) in AZs us-east-1a and us-east-1b\n- 2 private subnets (10.10.10.0/24, 10.10.20.0/24)\n- Internet Gateway attached to public subnets\n- NAT Gateway in each public subnet for private subnet egress\n- Security group: allow HTTPS inbound from 0.0.0.0/0 on public subnets\n- Deny all inbound on private subnets\n- VPC Flow Logs enabled, shipped to CloudWatch Logs\n- All resources tagged: Environment=prod, Team=payments, CostCenter=CC-402",
+  "requester": "alice@example.com",
+  "priority": "high",
+  "context": "This VPC will host the payments ECS cluster. Account: 123456789012 in us-east-1. Use Terraform module: terraform-aws-modules/vpc/aws version ~> 5.0"
+}
