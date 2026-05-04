@@ -1,21 +1,21 @@
 data "aws_region" "current" {
-  provider = aws.region1
+  provider = aws.primary
 }
 
 data "aws_caller_identity" "current" {
-  provider = aws.region1
+  provider = aws.primary
 }
 
 data "aws_kms_alias" "account_kms_key" {
-  provider = aws.region1
+  provider = aws.primary
   name     = "alias/aft/account_kms_cmk"
 }
 
 data "aws_ssm_parameter" "core_tags" {
-  provider = aws.region1
+  provider = aws.primary
   name     = "/aft/account-request/custom-fields/core_tags"
 }
 
 locals {
-  core_tags = jsondecode(data.aws_ssm_parameter.core_tags.insecure_value)
+  core_tags = jsondecode(data.aws_ssm_parameter.core_tags.value)
 }
