@@ -1,9 +1,9 @@
 terraform {
   required_providers {
     aws = {
-      source                = "localterraform.com/SSC/aws"
+      source                = "hashicorp/aws"
       version               = ">=5.0.0, <6.0.0"
-      configuration_aliases = [aws.region1]
+      configuration_aliases = [aws.primary]
     }
   }
 }
@@ -11,14 +11,14 @@ terraform {
 provider "aws" {
   region = "us-east-2"
   assume_role {
-    role_arn = "arn:aws:iam::${var.account}:role/tfe-role"
+    role_arn = "arn:aws:iam::999999999999:role/tfe-role"
   }
 }
 
 provider "aws" {
-  alias  = "region1"
+  alias  = "primary"
   region = "us-east-2"
   assume_role {
-    role_arn = "arn:aws:iam::${var.account}:role/tfe-role"
+    role_arn = "arn:aws:iam::999999999999:role/tfe-role"
   }
 }
