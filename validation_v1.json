@@ -1,0 +1,21 @@
+{
+  "passed": false,
+  "error_count": 7,
+  "errors": [
+    "REPLACE on terraform/modules/s3-datalake/example/data.tf:   provider = aws.region1",
+    "REPLACE on terraform/modules/s3-datalake/example/data.tf:   provider = aws.region1",
+    "REPLACE on terraform/modules/s3-datalake/example/data.tf:   provider = aws.region1",
+    "REPLACE on terraform/modules/s3-datalake/example/data.tf:   provider = aws.region1",
+    "REPLACE on terraform/modules/s3-datalake/example/data.tf:   core_tags = jsondecode(data.aws_ssm_parameter.core_tags.insecure_value)",
+    "REPLACE on terraform/modules/s3-datalake/example/main.tf:       trust_principal_arns = [\"arn:aws:iam::${var.account}:root\"]",
+    "REPLACE on terraform/modules/s3-datalake/example/main.tf:       trust_principal_arns = [\"arn:aws:iam::${var.account}:root\"]"
+  ],
+  "patches_parsed": 7,
+  "patches_applied": {},
+  "ok_count": 0,
+  "fail_count": 7,
+  "validation_version": 1,
+  "s3_uri": "s3://digital-worker-data-365202715966/sessions/INFRA-1234/validation_v1.json",
+  "validated_at": "2026-05-04T14:34:58.675717Z",
+  "summary": "Validation failed after 1 retries. 7 errors remain."
+}
